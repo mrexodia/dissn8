@@ -17,10 +17,27 @@ if __name__ == "__main__":
         print "ERROR: input file too small"
         sys.exit(1)
 
-    if len(data) != 24832:
-        print "WARNING: input file bigger than expected"
+    if len(data) == sn8_size + 60: # firmware embedded in Lenovo's tp_compact_usb_kb_with_trackpoint_fw.exe
+        data = data[:sn8_size]
+    elif len(data) != sn8_size:
+        print "ERROR: input file bigger than expected"
+        sys.exit(1)
+
+    data = data[256:] # strip the SN8 header
+    
+    flash_size = 0x3000 * 2
+    if len(data) != flash_size:
+        print "ERROR: incorrect flash size (this should never happen)"
+        sys.exit(1)
+
+    footer = data[-16:]
+    if footer != "\x00\x00\x00\x00\x00\x00\x00\x00\xF4\xFF\x24\x79\x5A\xFA\x58\x45":
+        print "ERROR: unexpected footer (%s)" % repr(footer)
+        sys.exit(1)
+
+    data = data[:flash_size - 16] # strip footer
 
     out_file = open(sys.argv[2], "wb") # open for [w]riting as [b]inary
-    out_file.write(data[256:][:(0x3000*2)])
+    out_file.write(data)
     out_file.close()
     print "done!"
